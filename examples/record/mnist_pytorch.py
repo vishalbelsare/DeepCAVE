@@ -2,14 +2,12 @@
 Multi-Layer Perceptron via PyTorch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This more advanced example incorporates multiple objectives, budgets and statusses to
-show the strenghts of DeepCAVE's recorder.
+This more advanced example incorporates multiple objectives, budgets and statuses to
+show the strength of DeepCAVE's recorder.
 """
 
 
-from inspect import BoundArguments
 import os
-from re import T
 import time as t
 import random
 import ConfigSpace as CS
@@ -63,7 +61,7 @@ class MNISTModel(pl.LightningModule):
             ]
         )
 
-        self.accuracy = Accuracy()
+        self.accuracy = Accuracy(task="multiclass", num_classes=self.num_classes)
 
     def prepare_data(self):
         # download
@@ -71,7 +69,6 @@ class MNISTModel(pl.LightningModule):
         MNIST(self.data_dir, train=False, download=True)
 
     def setup(self, stage=None):
-
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage is None:
             mnist_full = MNIST(self.data_dir, train=True, transform=self.transform)
@@ -186,7 +183,7 @@ def get_configspace(seed):
     num_neurons_layer1 = UniformIntegerHyperparameter(name="num_neurons_layer1", lower=5, upper=100)
     num_neurons_layer2 = UniformIntegerHyperparameter(name="num_neurons_layer2", lower=5, upper=100)
 
-    configspace.add_hyperparameters(
+    configspace.add(
         [
             model,
             activation,
@@ -199,8 +196,8 @@ def get_configspace(seed):
     )
 
     # Now add sub configspace
-    configspace.add_condition(CS.EqualsCondition(num_neurons_layer1, model, "mlp"))
-    configspace.add_condition(CS.EqualsCondition(num_neurons_layer2, model, "mlp"))
+    configspace.add(CS.EqualsCondition(num_neurons_layer1, model, "mlp"))
+    configspace.add(CS.EqualsCondition(num_neurons_layer2, model, "mlp"))
 
     return configspace
 
@@ -257,10 +254,9 @@ if __name__ == "__main__":
 
                     # The model weights are trained
                     trainer = pl.Trainer(
-                        accelerator="gpu",
+                        accelerator="cpu",
                         devices=1,
                         num_sanity_val_steps=0,  # No validation sanity
-                        auto_scale_batch_size="power",
                         deterministic=True,
                         min_epochs=epochs,
                         max_epochs=epochs,

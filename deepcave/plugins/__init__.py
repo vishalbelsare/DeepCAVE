@@ -1,3 +1,28 @@
+# Copyright 2021-2024 The DeepCAVE Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#  noqa: D400
+"""
+# Plugins
+
+This module provides a base class for all the available plugins.
+It provides different utilities to handle the plugins and check for compatibility in the runs.
+
+## Classes
+    - Plugin: Base class for all plugins.
+"""
+
 from abc import ABC
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -8,7 +33,6 @@ from collections import defaultdict
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from dash.dash import no_update
 from dash.dependencies import Input, Output, State
 from dash.development.base_component import Component
 from dash.exceptions import PreventUpdate
@@ -31,24 +55,35 @@ class Plugin(Layout, ABC):
     """
     Base class for all plugins.
 
-    Attributes
+    Provides different utilities to handle the plugins and check for compatibility in the runs.
+
+    Properties
     ----------
-    id : int
-        Unique identifier for the plugin.
-    name : str
-        Name of the plugin. It is shown in the navigation and in the title.
-    description : str, optional
-        Description of the plugin. Displayed below the title.
-    icon : str, optional
-        FontAwesome icon. Shown in the navigation.
-    help : str, optional
-        Path to the help file.
-    button_caption : str, optional
-        Caption of the button. Shown only, if `StaticPlugin` is used.
-    activate_run_selection : bool, optional
+    inputs : List[Tuple[str, str, bool, Any]]
+        The registered inputs.
+    outputs : List[Tuple[str, str, bool]]
+        The registered outputs.
+    previous_inputs : Dict[str, Dict[str, str]]
+        The previous inputs.
+    raw_outputs : Optional[Dict[str, Any]]
+        The raw outputs.
+    activate_run_selection : bool
         Shows a dropdown to select a run in the inputs layout.
         This feature is useful if only one run could be viewed at a time.
         Moreover, it prevents the plugin to calculate results across all runs.
+    id : str
+        The unique identifier for the plugin.
+    runs : List[AbstractRun]
+        A list of the abstract runs.
+    groups : List[Group]
+        A list of the groups.
+    help : str
+        The path to the documentation.
+    name : str
+        The name of the plugin.
+        It is shown in the navigation and title.
+    button_caption : str
+        Caption of the button. Shown only, if `StaticPlugin` is used.
     """
 
     id: str
@@ -62,13 +97,13 @@ class Plugin(Layout, ABC):
     def __init__(self) -> None:
         # Registered inputs and outputs
         self.inputs: List[Tuple[str, str, bool, Any]] = []
-        self.outputs: List[Tuple[str, str, bool]] = []
+        self.outputs: List[Tuple[str, str]] = []
 
         # For runtime
         self.previous_inputs: Dict[str, Dict[str, str]] = {}
         self.raw_outputs: Optional[Dict[str, Any]] = None
 
-        # We have to call the output layout one time to register
+        # The output layout has to be called one time to register
         # the values
         # Problem: Inputs/Outputs can't be changed afterwards anymore.
 
@@ -78,7 +113,6 @@ class Plugin(Layout, ABC):
         self.__class__.get_input_layout(self.register_input)
         self.__class__.get_filter_layout(lambda a, b: self.register_input(a, b, filter=True))
         self.__class__.get_output_layout(self.register_output)
-        self.__class__.get_mpl_output_layout(lambda a, b: self.register_output(a, b, mpl=True))
 
         super().__init__()
 
@@ -86,7 +120,7 @@ class Plugin(Layout, ABC):
     @interactive
     def get_base_url(cls) -> str:
         """
-        Generates the url for the plugin.
+        Generate the url for the plugin.
 
         Returns
         -------
@@ -100,8 +134,9 @@ class Plugin(Layout, ABC):
     @staticmethod
     def check_run_compatibility(run: AbstractRun) -> bool:
         """
-        Checks if a run is compatible with this plugin. If a plugin is not compatible,
-        you can not select the run.
+        Check if a run is compatible with this plugin.
+
+        If a plugin is not compatible, you can not select the run.
 
         Note
         ----
@@ -121,7 +156,8 @@ class Plugin(Layout, ABC):
 
     def check_runs_compatibility(self, runs: List[AbstractRun]) -> None:
         """
-        This function is needed if all selected runs need something in common
+        Needed if all selected runs need something in common.
+
         (e.g. budget or objective). Since this function is called before the layout is created,
         it can be also used to set common values for the plugin.
 
@@ -145,8 +181,10 @@ class Plugin(Layout, ABC):
         type: Any = None,
     ) -> str:
         """
-        Registers an input variable for the plugin. It is important to register the inputs
-        because callbacks have to be defined before the server is started.
+        Register an input variable for the plugin.
+
+        It is important to register the inputs.
+        This is, because callbacks have to be defined before the server is started.
         After registering all inputs, an internal mapping is created.
 
         Parameters
@@ -154,7 +192,7 @@ class Plugin(Layout, ABC):
         id : str
             Specifies the id of the input.
         attributes : Union[str, List[str]], optional
-            Attributes which should be passed to the (dash) component, by default ("value",)
+            Attributes which should be passed to the (dash) component, by default ("value",).
         filter : bool, optional
             Specifies if the input is a filter. By default False.
         type : Any, optional
@@ -178,18 +216,16 @@ class Plugin(Layout, ABC):
             if key not in self.inputs:
                 self.inputs.append(key)
 
-        # We have to rearrange the inputs because `State`
-        # must follow all `Input`. Since all filters are `Input`, we have to
-        # shift them to the front.
+        # The inputs have to be rearranged, because `State`
+        # must follow all `Input`. Since all filters are `Input`, they have to
+        # be shifted to the front.
         self.inputs.sort(key=lambda x: x[2], reverse=True)
 
         return self.get_internal_input_id(id)
 
-    def register_output(
-        self, id: str, attributes: Union[str, List[str]] = "value", mpl: bool = False
-    ) -> str:
+    def register_output(self, id: str, attributes: Union[str, List[str]] = "value") -> str:
         """
-        Registers an output variable for the plugin.
+        Register an output variable for the plugin.
 
         Parameters
         ----------
@@ -197,8 +233,6 @@ class Plugin(Layout, ABC):
             Specifies the id of the output.
         attributes : Union[str, List[str]], optional
             Attribute, by default "value"
-        mpl : bool, optional
-            Specifies if the registration is for matplotlib or default, by default False
 
         Returns
         -------
@@ -208,29 +242,31 @@ class Plugin(Layout, ABC):
         if isinstance(attributes, str):
             attributes = [attributes]
 
-        if mpl:
-            id += "-mpl"
-
         for attribute in attributes:
-            key = (id, attribute, mpl)
+            key = (id, attribute)
             if key not in self.outputs:
                 self.outputs.append(key)
 
         return self.get_internal_output_id(id)
 
     def get_internal_id(self, id: str) -> str:
+        """Get the internal id."""
         return f"{self.id}-{id}"
 
     def get_internal_input_id(self, id: str) -> str:
+        """Get the internal input id."""
         return f"{self.id}-{id}-input"
 
     def get_internal_output_id(self, id: str) -> str:
+        """Get the internal output id."""
         return f"{self.id}-{id}-output"
 
     @interactive
     def register_callbacks(self) -> None:
         """
-        Registers basic callbacks for the plugin. Following callbacks are registered:
+        Register basic callbacks for the plugin.
+
+        Following callbacks are registered:
         - If inputs changes, the changes are pasted back. This is in particular
         interest if input dependencies are used.
         - Raw data dialog to display raw data.
@@ -239,7 +275,7 @@ class Plugin(Layout, ABC):
         Raises
         ------
         RuntimeError
-            _description_
+            If no run id is found.
         """
         from deepcave import app, c, run_handler
 
@@ -257,7 +293,8 @@ class Plugin(Layout, ABC):
         if len(outputs) > 0:
 
             @app.callback(outputs, inputs)  # type: ignore
-            def plugin_input_update(pathname: str, *inputs_list: str) -> List[str]:
+            def plugin_input_update(pathname: str, *inputs_list: str) -> List[Optional[str]]:
+                """Update the input of the plugin."""
                 # Simple check if page was loaded for the first time
                 init = all(input is None for input in inputs_list)
 
@@ -273,10 +310,10 @@ class Plugin(Layout, ABC):
                         # Overwrite/set the passed inputs
                         update_dict(inputs, passed_inputs)
 
-                        # Then we have to take care of the run_selection
+                        # Then the run_selection has to be taken care of
                         selected_run: Optional[AbstractRun] = None
                         if self.activate_run_selection:
-                            # If run_selection is active and we don't have an id, then
+                            # If run_selection is active and the id is not known, then
                             # the passed inputs have no use.
                             try:
                                 run_id = passed_inputs["run"]["value"]
@@ -314,14 +351,14 @@ class Plugin(Layout, ABC):
                             update_dict(inputs, new_inputs)
 
                         # Set not used inputs
-                        for (id, attribute, _, _) in self.inputs:
+                        for id, attribute, _, _ in self.inputs:
                             if id not in inputs:
                                 inputs[id] = {}
 
                             if attribute not in inputs[id]:
                                 inputs[id][attribute] = None
                     elif inputs is not None:
-                        # We have to update the options of the run selection here.
+                        # The options of the run selection have to be updated here.
                         # This is important if the user have added/removed runs.
                         if self.activate_run_selection:
                             run_value = inputs["run"]["value"]
@@ -336,13 +373,16 @@ class Plugin(Layout, ABC):
                             inputs["run"]["value"] = run_value
                 else:
                     # Map the list `inputs` to a dict.
-                    inputs = self._list_to_dict(inputs_list)  # type: ignore
+                    # inputs_list_as_list is necessary as new variable,
+                    # because inputs_list is a tuple and cant be passed to _list_to_dict.
+                    inputs_list_as_list = list(inputs_list)
+                    inputs = self._list_to_dict(inputs_list_as_list)
 
                     if len(self.previous_inputs) == 0:
                         self.previous_inputs = inputs.copy()
 
                     # Only work on copies.
-                    # We don't want the inputs dict to be changed by the user.
+                    # The inputs dict should not be changed by the user.
                     _previous_inputs = self.previous_inputs.copy()
                     _inputs = inputs.copy()
 
@@ -356,35 +396,41 @@ class Plugin(Layout, ABC):
 
                         # Reset everything if run name changed.
                         if _previous_run_id is not None and _previous_run_id != _run_id:
-                            # We can't use load_inputs here only
+                            # load_inputs cannot be used here, only
                             # because `run` would be removed.
-                            # Also: We want to keep the current run name.
+                            # Also: The current run name does not need to be kept.
                             update_dict(_inputs, self.load_inputs())
+                            # Reset inputs
+                            if "objective_id" in _inputs.keys():
+                                update_dict(_inputs, {"objective_id": {"value": None}})
+                            if "budget_id" in _inputs.keys():
+                                update_dict(_inputs, {"budget_id": {"value": None}})
+                            if "hyperparameter_name_1" in _inputs.keys():
+                                update_dict(_inputs, {"hyperparameter_name_1": {"value": None}})
+                            if "hyperparameter_name_2" in _inputs.keys():
+                                update_dict(_inputs, {"hyperparameter_name_2": {"value": None}})
 
-                            # TODO: Reset only inputs which are not available in another run.
-                            # E.g. if options from budget in run_2 and run_3 are the same
-                            # take the budget from run_2 if changed to run_3. Otherwise,
-                            # reset budgets.
+                        if _run_id:
+                            selected_run = run_handler.get_run(_run_id)
 
-                        selected_run = run_handler.get_run(_run_id)
+                    if selected_run is not None:
+                        # How to update only parameters which have a dependency?
+                        user_dependencies_inputs = self.load_dependency_inputs(
+                            selected_run, _previous_inputs, _inputs
+                        )
 
-                    # How to update only parameters which have a dependency?
-                    user_dependencies_inputs = self.load_dependency_inputs(
-                        selected_run, _previous_inputs, _inputs
-                    )
-
-                    # Update dict
-                    # dict.update() remove keys, so we use our own method to do so
-                    update_dict(inputs, user_dependencies_inputs)  # inplace operation
+                        # Update dict
+                        # dict.update() removes keys, so our own method is used to do so
+                        update_dict(inputs, user_dependencies_inputs)  # inplace operation
 
                 # Let's cast the inputs
                 inputs = self._cast_inputs(inputs)
 
                 # From dict to list
-                inputs_list = self._dict_to_list(inputs, input=True)  # type: ignore
+                inputs_list_from_dict = self._dict_to_list(inputs, input=True)
                 self.previous_inputs = inputs
 
-                return list(inputs_list)
+                return inputs_list_from_dict
 
         # Register modal for raw data here
         @app.callback(  # type: ignore
@@ -396,6 +442,7 @@ class Plugin(Layout, ABC):
             State(self.get_internal_id("raw_data"), "is_open"),
         )
         def toggle_raw_data_modal(n: Optional[int], is_open: bool) -> Tuple[bool, str]:
+            """Toggle the raw data modal."""
             code = ""
             if n:
                 if (out := self.raw_outputs) is not None:
@@ -414,21 +461,22 @@ class Plugin(Layout, ABC):
             Input(self.get_internal_id("show_help"), "n_clicks"),
             State(self.get_internal_id("help"), "is_open"),
         )
-        def toggle_help_modal(n: Optional[int], is_open: bool) -> Tuple[bool, str]:
+        def toggle_help_modal(n: Optional[int], is_open: bool) -> bool:
+            """Toggle the help modal."""
             if n:
                 return not is_open
-
             return is_open
 
         # Register callback to click on configurations
-        for (id, *_) in self.outputs:
+        for id, *_ in self.outputs:
             internal_id = self.get_internal_output_id(id)
 
             @app.callback(
                 Output(internal_id, "clickData"),
                 Input(internal_id, "clickData"),
-            )
-            def go_to_configuration(click_data):  # type: ignore
+            )  # type: ignore
+            def go_to_configuration(click_data: Any):
+                """Open link from hovertext."""
                 if click_data is not None:
                     # Get hovertext
                     try:
@@ -449,7 +497,7 @@ class Plugin(Layout, ABC):
         self, inputs: Dict[str, Dict[str, str]], last_inputs: Dict[str, Dict[str, str]]
     ) -> Tuple[bool, bool]:
         """
-        Checks if the inputs have changed.
+        Check if the inputs have changed.
 
         Parameters
         ----------
@@ -467,11 +515,10 @@ class Plugin(Layout, ABC):
         inputs_changed = False
         filters_changed = False
 
-        # If only filters changed, then we don't need to
+        # If only filters changed, there is no need to
         # calculate the results again.
         if last_inputs is not None:
-            for (id, attribute, filter, _) in self.inputs:
-
+            for id, attribute, filter, _ in self.inputs:
                 if self.activate_run_selection:
                     if id == "run":
                         continue
@@ -487,26 +534,40 @@ class Plugin(Layout, ABC):
     @interactive
     def _process_raw_outputs(
         self, inputs: Dict[str, Dict[str, str]], raw_outputs: Dict[str, Any]
-    ) -> Union[Any, List[Any]]:
-        from deepcave import c, run_handler
+    ) -> Any:
+        """
+        Process the raw outputs and update the layout.
+
+        Parameters
+        ----------
+        inputs : Dict[str, Dict[str, str]]
+            The inputs for the passed runs.
+        raw_outputs : Dict[str, Any]
+            The raw outputs to process.
+
+        Returns
+        -------
+        Any
+            The processed outputs.
+        """
+        from deepcave import run_handler
 
         # Use raw outputs to update our layout
-        mpl_active = c.get("matplotlib-mode")
+        passed_runs: Union[List[AbstractRun], AbstractRun]
 
         if self.activate_run_selection:
             passed_runs = run_handler.get_run(inputs["run"]["value"])
             passed_outputs = raw_outputs[passed_runs.id]
         else:
-            passed_runs = self.all_runs  # type: ignore
+            passed_runs = self.all_runs
             passed_outputs = raw_outputs
 
         # Clean inputs
         cleaned_inputs = self._clean_inputs(inputs)
 
-        if mpl_active:
-            outputs = self.__class__.load_mpl_outputs(passed_runs, cleaned_inputs, passed_outputs)
-        else:
-            outputs = self.__class__.load_outputs(passed_runs, cleaned_inputs, passed_outputs)
+        # passed runs could be a list, but load outputs not
+        # accept lists, but expect single runs
+        outputs = self.__class__.load_outputs(passed_runs, cleaned_inputs, passed_outputs)  # type: ignore # noqa: E501
 
         logger.debug("Raw outputs processed successfully.")
 
@@ -521,20 +582,6 @@ class Plugin(Layout, ABC):
             if not isinstance(outputs, list):
                 outputs = [outputs]
 
-        # We have to add no_updates here for the mode we don't want
-        count_outputs = 0
-        count_mpl_outputs = 0
-        for (_, _, mpl_mode) in self.outputs:
-            if mpl_mode:
-                count_mpl_outputs += 1
-            else:
-                count_outputs += 1
-
-        if mpl_active:
-            outputs = [no_update for _ in range(count_outputs)] + outputs
-        else:
-            outputs = outputs + [no_update for _ in range(count_mpl_outputs)]
-
         if len(outputs) == 1:
             return outputs[0]
 
@@ -543,8 +590,9 @@ class Plugin(Layout, ABC):
     @interactive
     def _list_to_dict(self, values: List[str], input: bool = True) -> Dict[str, Dict[str, str]]:
         """
-        Maps the given values to a dict, regarding the sorting from
-        either self.inputs or self.outputs.
+        Map the given values to a dict.
+
+        Regarding the sorting from either self.inputs or self.outputs.
 
         Parameters
         ----------
@@ -556,12 +604,15 @@ class Plugin(Layout, ABC):
         Returns
         -------
         Dict[str, Dict[str, str]]
-            _description_
+            Dictionary containing the mapping information.
         """
+        # This is necessary, because of the conditional type of order
+        order: Union[List[Tuple[str, str]], List[Tuple[str, str, bool, Any]]]
+
         if input:
             order = self.inputs
         else:
-            order = self.outputs  # type: ignore
+            order = self.outputs
 
         mapping: Dict[str, Any] = {}
         for value, (id, attribute, *_) in zip(values, order):
@@ -577,8 +628,9 @@ class Plugin(Layout, ABC):
         self, d: Dict[str, Dict[str, str]], input: bool = False
     ) -> List[Optional[str]]:
         """
-        Maps the given dict to a list, respecting the sorting from either
-        self.inputs or self.outputs.
+        Map the given dict to a list.
+
+        Respecting the sorting from either self.inputs or self.outputs.
 
         Parameters
         ----------
@@ -592,20 +644,18 @@ class Plugin(Layout, ABC):
         List[Optional[str]]
             Sorted list from the given dict.
         """
-        from deepcave import c
+        # This is necessary, because of the conditional type of order
+        order: Union[List[Tuple[str, str]], List[Tuple[str, str, bool, Any]]]
 
         if input:
             order = self.inputs
         else:
-            order = self.outputs  # type: ignore
+            order = self.outputs
 
         result: List[Optional[str]] = []
-        for (id, attribute, instance, *_) in order:
+        for id, attribute, *_ in order:
             if not input:
-                # Instance is mlp_mode in case of outputs
-                # Simply ignore other outputs.
-                if instance != c.get("matplotlib-mode"):
-                    continue
+                continue
 
             try:
                 value = d[id][attribute]
@@ -616,28 +666,33 @@ class Plugin(Layout, ABC):
         return result
 
     @interactive
-    def _dict_as_key(self, d: Dict[str, Any], remove_filters: bool = False) -> Optional[str]:
+    def _dict_as_key(self, d: Dict[str, Any], remove_filters: bool = False) -> str:
         """
-        Converts a dictionary to a key. Only ids from self.inputs are considered.
+        Convert a dictionary to a key. Only ids from self.inputs are considered.
 
         Parameters
         ----------
         d : Dict[str, Any]
             Dictionary to get the key from.
         remove_filters : bool, optional
-            Option wheather the filters should be included or not. By default False.
+            Option whether the filters should be included or not. By default False.
 
         Returns
         -------
         Optional[str]
             Key as string from the given dictionary. Returns none if `d` is not a dictionary.
+
+        Raises
+        ------
+        TypeError
+            If `d` is not a dictionary.
         """
         if not isinstance(d, dict):
-            return None
+            raise TypeError("d must be a dictionary.")
 
         new_d = copy.deepcopy(d)
         if remove_filters:
-            for (id, _, filter, _) in self.inputs:
+            for id, _, filter, _ in self.inputs:
                 if filter:
                     if id in new_d:
                         del new_d[id]
@@ -646,8 +701,10 @@ class Plugin(Layout, ABC):
 
     def _cast_inputs(self, inputs: Dict[str, Dict[str, str]]) -> Dict[str, Dict[str, str]]:
         """
-        Casts the inputs based on `self.inputs`. Background is that dash always casts integers/
-        booleans to strings. This method ensured that the correct types are returned.
+        Cast the inputs based on `self.inputs`.
+
+        Background is that dash always casts integers/booleans to strings.
+        This method ensures that the correct types are returned.
 
         Parameters
         ----------
@@ -662,10 +719,9 @@ class Plugin(Layout, ABC):
         casted_inputs: Dict[str, Dict[str, str]] = defaultdict(dict)
         for id, attributes in inputs.items():
             for attribute in attributes:
-
                 # Find corresponding input
                 type = None
-                for (id_, attribute_, _, type_) in self.inputs:
+                for id_, attribute_, _, type_ in self.inputs:
                     if id == id_ and attribute == attribute_:
                         type = type_
                         break
@@ -680,8 +736,9 @@ class Plugin(Layout, ABC):
 
     def _clean_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Cleans the given inputs s.t. only the first value is used.
-        Also, boolean values are casted to booleans.
+        Clean the given inputs s.t. only the first value is used.
+
+        Also, boolean values are cast to booleans.
 
         Example
         -------
@@ -695,16 +752,19 @@ class Plugin(Layout, ABC):
 
         Parameters
         ----------
-        inputs (dict): Inputs to clean.
+        inputs : Dict[str, Any]
+            Inputs to clean.
 
-        Returns:
-            dict: Cleaned inputs.
+        Returns
+        -------
+        Dict[str, Any]
+            Cleaned inputs.
         """
         used_ids = []
         cleaned_inputs = {}
-        for (id, attribute, *_) in self.inputs:
-            # Since self.inputs is ordered, we use the first occuring attribute and add
-            # the id so it is not used again.
+        for id, attribute, *_ in self.inputs:
+            # Since self.inputs is ordered, the first occurring attribute is used and
+            # the id is added so it is not used again.
             if id not in used_ids:
                 i = inputs[id][attribute]
 
@@ -719,23 +779,47 @@ class Plugin(Layout, ABC):
 
         return cleaned_inputs
 
-    @property  # type: ignore
+    @property
     @interactive
     def runs(self) -> List[AbstractRun]:
+        """
+        Get the runs as a list.
+
+        Returns
+        -------
+        List[AbstractRun]
+            The list with the runs.
+        """
         from deepcave import run_handler
 
         return run_handler.get_runs()
 
-    @property  # type: ignore
+    @property
     @interactive
     def groups(self) -> List[Group]:
+        """
+        Get the groups as a list.
+
+        Returns
+        -------
+        List[Group]
+            The list with the groups.
+        """
         from deepcave import run_handler
 
         return run_handler.get_groups()
 
-    @property  # type: ignore
+    @property
     @interactive
     def all_runs(self) -> List[AbstractRun]:
+        """
+        Get all runs and include the groups as a list.
+
+        Returns
+        -------
+        List[AbstractRun]
+            The list with all runs and included groups.
+        """
         from deepcave import run_handler
 
         return run_handler.get_runs(include_groups=True)
@@ -743,15 +827,28 @@ class Plugin(Layout, ABC):
     @interactive
     def __call__(self, render_button: bool = False) -> List[Component]:
         """
-        Returns the components for the plugin. Basically, all blocks and elements of the plugin
-        are stacked-up here
+        Return the components for the plugin.
+
+        Basically, all blocks and elements of the plugin are stacked-up here.
+
+        Parameters
+        ----------
+        render_button : bool, optional
+            Whether to render the button or not. By default False.
 
         Returns
         -------
         List[Component]
             Layout as list of components.
+
+        Raises
+        ------
+        NotMergeableError
+            If runs are not compatible.
+        FileNotFoundError
+            If the help file can not be found.
         """
-        from deepcave import c, notification
+        from deepcave import notification
 
         # Reset runtime variables
         self.previous_inputs = {}
@@ -802,7 +899,6 @@ class Plugin(Layout, ABC):
             ]
         else:
             components += [html.H1(self.name)]
-
         try:
             self.check_runs_compatibility(self.all_runs)
         except NotMergeableError as message:
@@ -831,7 +927,7 @@ class Plugin(Layout, ABC):
             ],
         )
 
-        # We always have to render it because of the button.
+        # It always has to be rendered, because of the button.
         # Button tells us if the page was just loaded.
         components += [
             html.Div(
@@ -847,7 +943,27 @@ class Plugin(Layout, ABC):
             )
         ]
 
-        def register_in(a, b):  # type: ignore
+        def register_in(a: str, b: Union[List[str], str]) -> str:
+            """
+            Register the given input.
+
+            Note
+            ----
+            For more information, see 'register_input'.
+
+            Parameters
+            ----------
+            a : str
+                Specifies the id of the input.
+            b : Union[List[str], str]
+                Attributes which should be passed to the (dash) component, by default ("value",).
+
+            Returns
+            -------
+            str
+                Unique id for the input and plugin.
+                This is necessary because ids are defined globally.
+            """
             return self.register_input(a, b, filter=True)
 
         filter_layout = self.__class__.get_filter_layout(register_in)
@@ -867,21 +983,7 @@ class Plugin(Layout, ABC):
                     id=f"{self.id}-output",
                     className="shadow-sm p-3 bg-white rounded-lg loading-container",
                     children=output_layout,
-                    style={} if not c.get("matplotlib-mode") else {"display": "none"},
-                )
-            ]
-
-        def register_out(a, b):  # type: ignore
-            return self.register_output(a, b, mpl=True)
-
-        output_layout = self.__class__.get_mpl_output_layout(register_out)
-        if output_layout is not None:
-            components += [
-                html.Div(
-                    id=f"{self.id}-mpl-output",
-                    className="shadow-sm p-3 bg-white rounded-lg loading-container",
-                    children=output_layout,
-                    style={} if c.get("matplotlib-mode") else {"display": "none"},
+                    style={},
                 )
             ]
 
@@ -932,15 +1034,17 @@ class Plugin(Layout, ABC):
 
     @staticmethod
     @interactive
-    def get_run_input_layout(register: Callable[[str, Union[str, List[str]]], str]) -> Component:
+    def get_run_input_layout(register: Callable) -> Component:
         """
-        Generates the run selection input.
+        Generate the run selection input.
+
         This is only the case if `activate_run_selection` is True.
 
         Parameters
         ----------
-        register : Callable[[str, Union[str, List[str]]], str]
+        register : Callable
             The register method to register (user) variables.
+            For more information, see 'register_input'.
 
         Returns
         -------
@@ -964,14 +1068,15 @@ class Plugin(Layout, ABC):
         check_run_compatibility: Callable[[AbstractRun], bool],
     ) -> Dict[str, Any]:
         """
-        Loads the options for `get_run_input_layout`.
+        Load the options for `get_run_input_layout`.
+
         Both runs and groups are displayed.
 
         Parameters
         ----------
-        runs : Dict[str, Run]
+        runs : List[AbstractRun]
             The runs to display.
-        groups : Dict[str, Group]
+        groups : List[Group]
             The groups to display.
         check_run_compatibility : Callable[[AbstractRun], bool]
             If a single run is compatible. If not, the run is not shown.
@@ -981,7 +1086,6 @@ class Plugin(Layout, ABC):
         Dict[str, Any]
             Both runs and groups, separated by a separator.
         """
-
         labels = []
         values = []
         disabled = []
@@ -989,8 +1093,12 @@ class Plugin(Layout, ABC):
         for run in runs:
             if check_run_compatibility(run):
                 try:
+                    run_path = run.path
+                    if run_path is not None:
+                        run_name = run_path.parent.name + "/" + run.name
+
                     values.append(run.id)
-                    labels.append(run.name)
+                    labels.append(run_name)
                     disabled.append(False)
                 except Exception:
                     pass
@@ -1018,7 +1126,8 @@ class Plugin(Layout, ABC):
     @interactive
     def get_selected_runs(self, inputs: Dict[str, Any]) -> List[AbstractRun]:
         """
-        Parses selected runs from inputs.
+        Parse selected runs from inputs.
+
         If self.activate_run_selection is set, return only selected run. Otherwise, return all
         possible runs.
 
@@ -1050,7 +1159,7 @@ class Plugin(Layout, ABC):
 
             # Also:
             # Remove `run` from inputs_key because
-            # we don't want the run names included.
+            # The runs name does not need to be included
             _inputs = inputs.copy()
             del _inputs["run"]
 
@@ -1061,6 +1170,7 @@ class Plugin(Layout, ABC):
     def load_inputs(self) -> Dict[str, Any]:
         """
         Load the content for the defined inputs in `get_input_layout` and `get_filter_layout`.
+
         This method is necessary to pre-load contents for the inputs. So, if the plugin is
         called for the first time or there are no results in the cache, the plugin gets its
         content from this method.
@@ -1079,7 +1189,9 @@ class Plugin(Layout, ABC):
         inputs: Dict[str, Any],
     ) -> Dict[str, Any]:
         """
-        Same as `load_inputs` but called after inputs have changed. Provides a lot of flexibility.
+        Load the content as in 'load_inputs' but called after inputs have changed.
+
+        Provides a lot of flexibility.
 
         Note
         ----
@@ -1088,7 +1200,7 @@ class Plugin(Layout, ABC):
 
         Parameters
         ----------
-        selected_run : Optional[Union[AbstractRun, List[AbstractRun]]], optional
+        run : Optional[Union[AbstractRun, List[AbstractRun]]], optional
             The selected run from the user. In case of `activate_run_selection`, only one run
             is passed. Defaults to None.
         previous_inputs : Dict[str, Any]
@@ -1104,14 +1216,15 @@ class Plugin(Layout, ABC):
         return inputs
 
     @staticmethod
-    def get_input_layout(register: Callable[[str, Union[str, List[str]]], str]) -> List[Component]:
+    def get_input_layout(register: Callable) -> List[Component]:
         """
         Layout for the input block.
 
         Parameters
         ----------
-        register : Callable[[str, Union[str, List[str]]], str]
+        register : Callable
             The register method to register (user) variables.
+            For more information, see 'register_input'.
 
         Returns
         -------
@@ -1121,14 +1234,15 @@ class Plugin(Layout, ABC):
         return []
 
     @staticmethod
-    def get_filter_layout(register: Callable[[str, Union[str, List[str]]], str]) -> List[Component]:
+    def get_filter_layout(register: Callable) -> List[Component]:
         """
         Layout for the filter block.
 
         Parameters
         ----------
-        register : Callable[[str, Union[str, List[str]]], str]
+        register : Callable
             The register method to register (user) variables.
+            For more information, see 'register_input'.
 
         Returns
         -------
@@ -1138,40 +1252,20 @@ class Plugin(Layout, ABC):
         return []
 
     @staticmethod
-    def get_output_layout(
-        register: Callable[[str, Union[str, List[str]]], str]
-    ) -> Optional[Union[Component, List[Component]]]:
+    def get_output_layout(register: Callable) -> Optional[Union[Component, List[Component]]]:
         """
         Layout for the output block.
 
         Parameters
         ----------
-        register : Callable[[str, Union[str, List[str]]], str]
+        register : Callable
             The register method to register outputs.
+            For more information, see 'register_input'.
 
         Returns
         -------
         Union[Component, List[Component]]
             Layouts for the output block.
-        """
-        return None
-
-    @staticmethod
-    def get_mpl_output_layout(
-        register: Callable[[str, Union[str, List[str]]], str]
-    ) -> Optional[Union[Component, List[Component]]]:
-        """
-        Layout for the matplotlib output block.
-
-        Parameters
-        ----------
-        register : Callable[[str, Union[str, List[str]]], str]
-            The register method to register outputs.
-
-        Returns
-        -------
-        Union[Component, List[Component]]
-            Layout for the matplotlib output block.
         """
         return None
 
@@ -1182,44 +1276,14 @@ class Plugin(Layout, ABC):
         outputs: Dict[str, Union[str, Dict[str, str]]],
     ) -> Union[Component, List[Component]]:
         """
-        Reads in the raw data and prepares them for the layout.
+        Read in the raw data and prepare them for the layout.
 
         Note
         ----
         The passed `inputs` are cleaned and therefore differs compared to `load_inputs` or
-        `load_dependency_inputs`. Please see `_clean_inputs` for more information.
-
-        Parameters
-        ----------
-        runs : Union[AbstractRun, Dict[str, AbstractRun]]
-            All selected runs. If `activate_run_selection` is set, only the selected run is
-            returned.
-        inputs : Dict[str, Dict[str, str]]
-            Input and filter values from the user.
-        outputs : Dict[str, Union[str, Dict[str, str]]]
-            Raw outputs from the runs. If `activate_run_selection` is set,
-            a Dict[str, str] is returned.
-
-        Returns
-        -------
-        Union[Component, List[Component]]
-            The components must be in the same position as defined in `get_output_layout`.
-        """
-        return []
-
-    @staticmethod
-    def load_mpl_outputs(
-        runs: Union[AbstractRun, Dict[str, AbstractRun]],
-        inputs: Dict[str, Dict[str, str]],
-        outputs: Dict[str, Union[str, Dict[str, str]]],
-    ) -> Union[Component, List[Component]]:
-        """
-        Reads in the raw data and prepares them for the layout.
-
-        Note
-        ----
-        The passed `inputs` are cleaned and therefore differs compared to `load_inputs` or
-        `load_dependency_inputs`. Please see `_clean_inputs` for more information.
+        `load_dependency_inputs`.
+        Inputs are cleaned s.t. only the first value is used.
+        Also, boolean values are casted to booleans.
 
         Parameters
         ----------
@@ -1242,7 +1306,7 @@ class Plugin(Layout, ABC):
     @staticmethod
     def process(run: AbstractRun, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Returns raw data based on a run and input data.
+        Return raw data based on a run and input data.
 
         Warning
         -------
@@ -1251,7 +1315,8 @@ class Plugin(Layout, ABC):
         Note
         ----
         The passed `inputs` are cleaned and therefore differs compared to `load_inputs` or
-        `load_dependency_inputs`. Please see `_clean_inputs` for more information.
+        `load_dependency_inputs`. Inputs are cleaned s.t. only the first value is used.
+        Also, boolean values are casted to booleans.
 
         Parameters
         ----------
@@ -1272,7 +1337,8 @@ class Plugin(Layout, ABC):
         cls, runs: Union[AbstractRun, List[AbstractRun]], inputs: Dict[str, Any]
     ) -> Union[Dict[str, Any], Dict[str, Dict[str, Any]]]:
         """
-        Checks whether run selection is active and accepts either one or multiple runs at once.
+        Check whether run selection is active and accepts either one or multiple runs at once.
+
         Calls `process` internally.
 
         Parameters
@@ -1314,7 +1380,8 @@ class Plugin(Layout, ABC):
 
     def generate_inputs(self, **kwargs: Any) -> Dict[str, Any]:
         """
-        Generates inputs for the `process` and `load_outputs` required for api mode.
+        Generate inputs for the `process` and `load_outputs` required for api mode.
+
         The arguments are validated against the input schema.
 
         Note
@@ -1330,11 +1397,17 @@ class Plugin(Layout, ABC):
         -------
         Dict[str, Any]
             The inputs for the run.
+
+        Raises
+        ------
+        ValueError
+            If an unknown input is passed.
+            If an input is missing.
         """
         mapping = {}
-        for (id, attribute, *_) in self.inputs:
-            # Since `self.inputs` is ordered, we use the first occuring attribute and add
-            # the id so it is not used again.
+        for id, attribute, *_ in self.inputs:
+            # Since `self.inputs` is ordered, the first occurring attribute is used and
+            # the id is added, so it is not used again.
             if id not in mapping:
                 mapping[id] = attribute
 

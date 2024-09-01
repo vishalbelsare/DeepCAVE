@@ -1,7 +1,18 @@
-import unittest
+# Copyright 2021-2024 The DeepCAVE Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-import numpy as np
-import pytest
+import unittest
 
 from deepcave.constants import COMBINED_COST_NAME
 from deepcave.evaluators.epm.fanova_forest import FanovaForest
@@ -16,7 +27,7 @@ class TestEPM(unittest.TestCase):
         # Initiate run here
         self.run: AbstractRun = SMAC3v1Run.from_path("logs/SMAC3v1/mlp/run_1")
         self.cs = self.run.configspace
-        self.hp_names = self.cs.get_hyperparameter_names()
+        self.hp_names = list(self.cs.keys())
 
         # Get the data
         df = self.run.get_encoded_data(

@@ -1,3 +1,24 @@
+# Copyright 2021-2024 The DeepCAVE Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#  noqa: D400
+"""
+# Configs
+
+This module provides a utility for parsing the configurations from a filename.
+"""
+
 from typing import Optional
 
 import importlib
@@ -10,7 +31,9 @@ from deepcave.config import Config
 
 def parse_config(filename: Optional[str] = None) -> Config:
     """
-    Parses the config given the filename. Both relative and absolute paths are possible.
+    Parse the config given the filename.
+
+    Both relative and absolute paths are possible.
 
     Parameters
     ----------
@@ -49,7 +72,7 @@ def parse_config(filename: Optional[str] = None) -> Config:
             script_dir = path.stem  # That's the path without the script name
             module_name = p.stem  # That's the script name without the extension
 
-            # Now we add to sys path
+            # Now it is added to sys path
             sys.path.append(str(path))
 
             module = importlib.import_module(f"{script_dir}.{module_name}")

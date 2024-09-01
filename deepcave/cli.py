@@ -1,4 +1,27 @@
-from typing import Any, List
+# Copyright 2021-2024 The DeepCAVE Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#  noqa: D400
+"""
+# CLI
+
+This module defines command-line options using flags.
+
+This includes the entry point for the programs execution.
+"""
+
+from typing import Any
 
 import multiprocessing
 import subprocess
@@ -16,14 +39,14 @@ flags.DEFINE_integer(
     "How many workers should be specified. In your case, the maximum number of workers should be "
     f"{multiprocessing.cpu_count() - 1}.",
 )
-flags.DEFINE_boolean("docker", False, "Uses docker image to start DeepCAVE. Not supported yet.")
 flags.DEFINE_string("config", None, "Filename to a user-specific config.")
 flags.DEFINE_string(
     "get_config_value", None, "Prints the value of a given config key. Useful for bash scripts."
 )
 
 
-def execute(_) -> None:
+def execute(_: Any) -> None:
+    """Entry point for the programs execution."""
     if (config_key := FLAGS.get_config_value) is not None:
         config = FLAGS.config
         if config is not None:
@@ -34,19 +57,19 @@ def execute(_) -> None:
 
     HERE = Path(__file__).parent
 
-    if FLAGS.docker:
-        exit("The command is not supported yet.")
-        # subprocess.call('./start_docker.sh')
-    else:
-        start = HERE / "start.sh"
-        open = "true" if FLAGS.open else "false"
-        n_workers = str(FLAGS.n_workers)
+    start = HERE / "start.sh"
+    open = "true" if FLAGS.open else "false"
+    n_workers = str(FLAGS.n_workers)
 
-        if FLAGS.config is not None:
-            subprocess.call([start, open, n_workers, str(FLAGS.config)])
-        else:
-            subprocess.call([start, open, n_workers])
+    if FLAGS.config is not None:
+        subprocess.call([start, open, n_workers, str(FLAGS.config)])
+    else:
+        subprocess.call([start, open, n_workers])
 
 
 def main() -> None:
-    app.run(execute)
+    """Call the execute function."""
+    try:
+        app.run(execute)
+    except KeyboardInterrupt:
+        exit("KeyboardInterrupt.")
