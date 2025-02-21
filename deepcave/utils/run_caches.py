@@ -1,20 +1,55 @@
-from typing import Any, Dict, Iterator, Optional, Union
+# Copyright 2021-2024 The DeepCAVE Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#  noqa: D400
+"""
+# RunCaches
+
+This module defines a class for holding the caches for selected runs.
+
+Utilities provided include updating, getting, setting and clearing.
+
+## Classes
+    - RunCaches: Hold the caches for the selected runs.
+"""
+
+from typing import Any, Dict, Optional
 
 import shutil
 
+from deepcave.config import Config
 from deepcave.runs import AbstractRun
 from deepcave.utils.cache import Cache
-from deepcave.utils.hash import string_to_hash
 from deepcave.utils.logs import get_logger
 
 
 class RunCaches:
     """
-    Holds the caches for the selected runs. The caches are used for the plugins to store the
+    Hold the caches for the selected runs.
+
+    The caches are used for the plugins to store the
     raw outputs so that raw outputs must not be calculated again.
 
     Each input has its own cache. This change was necessary because it ensures that not all data
-    are loaded if they are not needed.
+    is loaded if not needed.
+
+    Properties
+    ----------
+    cache_dir : Path
+        The path to the cache directory of the run.
+    logger : Logger
+        The logger for the run cache.
     """
 
     def __init__(self, config: "Config"):
@@ -24,7 +59,8 @@ class RunCaches:
 
     def update(self, run: AbstractRun) -> bool:
         """
-        Updates the cache for the given run. If the cache does not exists it will be created.
+        Update the cache for the given run. If the cache does not exists it will be created.
+
         If the run hash is different from the saved variant the cache will be reset.
 
         Parameters
@@ -86,9 +122,9 @@ class RunCaches:
 
         cache.write()
 
-    def get(self, run: AbstractRun, plugin_id: str, inputs_key: str) -> Dict[str, Any]:
+    def get(self, run: AbstractRun, plugin_id: str, inputs_key: str) -> Optional[Dict[str, Any]]:
         """
-        Returns the raw outputs for the given run, plugin and inputs key.
+        Return the raw outputs for the given run, plugin and inputs key.
 
         Parameters
         ----------
@@ -101,8 +137,13 @@ class RunCaches:
 
         Returns
         -------
-        Dict[str, Any]
+        Optional[Dict[str, Any]]
             Raw outputs for the given run, plugin and inputs key.
+
+        Raises
+        ------
+        AssertionError
+            If the outputs of the cache are not a dict.
         """
         filename = self.cache_dir / run.id / plugin_id / f"{inputs_key}.json"
 
@@ -110,11 +151,14 @@ class RunCaches:
             return None
 
         cache = Cache(filename, debug=self._debug, write_file=False)
-        return cache.get("outputs")
+        outputs = cache.get("outputs")
+        assert isinstance(outputs, dict), "Outputs of cache must be a dict."
+        return outputs
 
     def set(self, run: AbstractRun, plugin_id: str, inputs_key: str, value: Any) -> None:
         """
-        Sets the value for the given run, plugin and inputs key.
+        Set the value for the given run, plugin and inputs key.
+
         Since each input key has it's own cache, only necessary data are loaded.
 
         Parameters
@@ -133,15 +177,11 @@ class RunCaches:
         cache.set("outputs", value=value)
 
     def clear_run(self, run: AbstractRun) -> None:
-        """
-        Removes all caches for the given run.
-        """
+        """Remove all caches for the given run."""
         shutil.rmtree(self.cache_dir / run.id)
 
     def clear(self) -> None:
-        """
-        Removes all caches.
-        """
+        """Remove all caches."""
         try:
             shutil.rmtree(self.cache_dir)
         except Exception:

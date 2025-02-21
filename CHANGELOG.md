@@ -1,3 +1,154 @@
+# Version 1.3.4
+
+## Bug-Fixes
+- Fix dependency issues 
+
+# Version 1.3.3
+
+## Bug-Fixes
+- Fixed configuration footprint for Mac platforms
+- fix bug in plots
+
+## Converters
+- Add for each converter a method to check whether a run is valid.
+- Change rst docs of converters.
+
+## Quality of Life
+- Improve documentation on installation for Mac platforms
+
+## General Layout
+- Fix navigation and button problems in general layout.
+- Change general layout to be more intuitive.
+
+# Version 1.3.2
+
+## Features
+- Allow Importance and ablation path analysis for multi-objective runs.
+
+# Version 1.3.1
+
+## Quality of Life
+- Improve documentation on installation of extra requirements.
+- Add licence information to all source files.
+
+# Version 1.3
+
+## Converters
+- Add support for AMLTK.
+- Add support for Optuna.
+- Add support for adding a run in DataFrame format (#137).
+- BOHB: Consider missing state as valid state as state is not provided by default (#65).
+
+## Version-Updates
+- ConfigSpace from 0.6.1 to 1.2.0
+- Numpy from 1.26.4 to 2.0.1
+- pyPDPPartitioner from to 0.1.8 to 0.1.9
+
+## Ablation Paths Plugin
+- Added ablation paths as a plugin.
+- Added ablation as a evaluator to use for the plugin.
+- Added tests as well as documentation.
+- Modified the RandomForest surrogate model, so it can be passed the number of trees.
+
+## Move plugins
+- Moved the Configuration cube and the parallel coordinates plugin from objective to hyperparameter.
+- Changed layout accordingly as well as the documentation.
+
+## Bug-Fixes
+- Upgrade pyPDPPartitioner to 0.1.9 as a requirement which fixes a bug related to copying config space objects (#111).
+
+## Quality of Life
+- Update the documentation to reflect the new changes.
+- Disable warnings during RunHandler initialization to avoid showing warnings with respect to previously loaded runs.
+- Remove option to use docker (not yet supported).
+- Add SMAC3v2 multi-fidelity example runs.
+- Add more useful SMAC3v2 multi-objective example run.
+- Remove defective matplotlib button and associated functionalities.
+
+# Version 1.2.1
+
+## Quality of Life
+- Runs now get displayed with their parent directory for better distinguishability.
+- Increase plot font sizes.
+- Add a simple loading bar functionality for longer runs.
+
+## General
+- Seed is now required in the Recorder.
+
+## Bug-Fixes
+- Use normalized LPI importance via variance instead of importance over mean (#152)
+- Return nan as importance values if variance is 0. for a hyperparameter / budget (#152)
+
+## Plugins
+- Show a run's hoover-text for the actual budget of a trial in Cost over Time with Combined budget (#154).
+- Use highest budget as default budget for Cost over Time instead of Combined.
+- Show best value / config for each objective instead of merged objective in Overview (#159).
+- Use chosen objective instead of merged objective to get the incumbent for the calculation of LPI importance (#159).
+- Add total runtime in overview (#155).
+
+# Version 1.2
+
+## Plugins
+- Add symbolic explanations plugin (#46).
+- It is now possible to view multiple unequal runs at once in Cost over Time and Pareto (#93).
+- Runs with unequal objectives cannot be displayed together.
+- Added an enum for displaying according warning messages.
+
+## Enhancements
+- Fix lower bounds of dependency versions.
+- Allow to load multi-objective SMAC3v2 and add example (#69).
+- Allow to load runs with multiple seeds and add examples (#70).
+- Correct incumbent calculation when single objective should be maximized.
+- Correct range of configuration cube slider for number of configs.
+- Do not disable existing loggers.
+- Update author email.
+- Add exit button which first deletes running jobs and then terminates DeepCave.
+- Nicer handling of Keyboard Interrupt.
+- Disable debug mode.
+- Save plotly plots in higher resolution upon download.
+- Get hovertext per budget in Footprint, Config Cube, Cost over Time, and Pareto Front.
+
+## Bug-Fixes
+- Fix missing objective specification in LPI evaluator (#71).
+- Don't convert BOHB runs with status 'running' (consistent with SMAC).
+- Fix api examples (#68).
+- Reset inputs to fix error when subsequently selecting runs with different configspaces, objectives or budgets (#106).
+- Fix errors due to changing inputs before runselection (#64).
+- For fANOVA, remove constant hyperparameters from configspace (#9).
+- When getting budget, objectives etc from multiple runs in Cost over Time and Pareto Front:
+    - Instead of taking the first run as comparative value,
+    - take the one with the lowest budget, else the index for the budgets could be out of bounds.
+- For PCP, show hyperparameters with highest importance closest to the cost, i.e. right (#124).
+- Add init files to all test directories.
+- Correct LPI importance tests.
+- Free port when exiting via the exit button (#52).
+
+## Documentation
+- Add How to Contribute section.
+- Expand documentation for partial dependence plugin.
+
+## Version-Updates
+- Black version from 23.1.0 to 23.3.0
+- Mypy from 0.930 to 1.5.1
+
+## Mypy
+- Updated args so there are no missing imports
+- Updated additional dependencies, so mypy can check all types
+- Note: If the installs in requirements change, it has to be adapted in additional dependencies
+- Added many type annotations
+- In some cases internal refactoring for variables, due to typing
+
+## Pydocstyle and Linter
+- Major overhaul of docstrings in various files
+- Removed unused imports and variables
+
+## Groups
+- Groups now get a default name, if no name was entered by the user.
+- Groups get sorted alphabetically to appear more ordered.
+
+## Additional Changes
+- Added a "make install examples" in Makefile
+
 # Version 1.1.3
 
 ## Bug-Fixes
@@ -24,7 +175,7 @@
 - SMAC 2.0
 
 ## Dependencies
-- Remove SMAC dependency by adding required function directly
+- Remove SMAC dependency by adding required function directly.
 
 # Version 1.0.1
 
